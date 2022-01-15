@@ -1,10 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
-
 import 'package:flutter/material.dart';
 
+import 'package:provider/provider.dart';
+
+import 'package:pie_chart/pie_chart.dart';
+
 import 'package:seccion_2/models/band.dart';
+import 'package:seccion_2/services/socket_service.dart';
 
 class Homepage extends StatefulWidget {
   @override
@@ -12,25 +16,64 @@ class Homepage extends StatefulWidget {
 }
 
 class _HomepageState extends State<Homepage> {
-  List<Band> bands = [
-    Band(id: '1', name: 'Metallica', votes: 5),
-    Band(id: '2', name: 'Queen', votes: 1),
-    Band(id: '3', name: 'Héroes del Silencio', votes: 2),
-    Band(id: '4', name: 'Bon Jovi', votes: 5),
-  ];
+  List<Band> bands = [];
+
+  // Hook
+  @override
+  void initState() {
+    // listen: false : desahabilatar notificar cambios de props del modelo recibido Socketservice
+    final socketService = Provider.of<SocketService>(context, listen: false);
+
+    // iniciar escucha del evento active-bands
+    socketService.socket.on('active-bands', _handleActiveBands);
+    // redibujar - al mutar prop del statefulwidget : bands
+    super.initState();
+  }
+
+  // metodo privada
+  _handleActiveBands(dynamic payload) {
+    bands = (payload as List).map((band) => Band.fromMap(band)).toList();
+
+    setState(() {});
+  }
+
+  // Hook _ cuando se destroce el widget
+  @override
+  void dispose() {
+    final socketService = Provider.of<SocketService>(context, listen: false);
+    // terminar escuahe del evento - active-bands
+    socketService.socket.off('active-bands');
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final socketService = Provider.of<SocketService>(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text('BandNames', style: TextStyle(color: Colors.black87)),
+        title: const Text('BandNames', style: TextStyle(color: Colors.black87)),
         backgroundColor: Colors.white,
         elevation: 1,
+        actions: <Widget>[
+          Container(
+            margin: const EdgeInsets.only(right: 10),
+            child: (socketService.serverStatus == ServerStatus.Online)
+                ? Icon(Icons.check_circle, color: Colors.blue[300])
+                : const Icon(Icons.offline_bolt, color: Colors.red),
+          )
+        ],
       ),
-      body: ListView.builder(
-          // itemCount : basicamente lo que occupamos para crear cada uno de los elementos bajo demanda
-          itemCount: bands.length,
-          itemBuilder: (context, i) => _bandTile(bands[i])),
+      body: Column(
+        children: <Widget>[
+          _showGraph(),
+          Expanded(
+            // expanded obligatorio para list.view funcione en col - toma todo espacio disponible
+            child: ListView.builder(
+                itemCount: bands.length,
+                itemBuilder: (context, i) => _bandTile(bands[i])),
+          )
+        ],
+      ),
       // button ubicada abajo derecha
       floatingActionButton: FloatingActionButton(
           // onPressed: addNewBand : noten mando solo ref del metodo addNewBand : es decir tiempo de ejecuccion es tiempo de accion
@@ -44,16 +87,13 @@ class _HomepageState extends State<Homepage> {
 // _bandTile Extaredo como  metodo return widget
 
   Widget _bandTile(Band band) {
+    final socketService = Provider.of<SocketService>(context, listen: false);
     // 12. Borrar una banda - Dismissible - animacion de elminacion
     return Dismissible(
       key: Key(band.id),
       direction: DismissDirection.startToEnd,
       //  onDismissed : se dispara cuando hago todo Movimiento
-      onDismissed: (direction) {
-        print('direction: $direction');
-        print('id: ${band.id}');
-        // TODO: llamar el borrado en el server backend - borrada data de la memoria
-      },
+      onDismissed: (_) => socketService.emit('delete-band', {'id': band.id}),
       background: Container(
           // podemos implemnentar lo que sea aqui basura etc ... puesto que sea widget
           padding: const EdgeInsets.only(left: 8.0),
@@ -70,9 +110,7 @@ class _HomepageState extends State<Homepage> {
         ),
         title: Text(band.name),
         trailing: Text('${band.votes}', style: const TextStyle(fontSize: 20)),
-        onTap: () {
-          print(band.name);
-        },
+        onTap: () => socketService.socket.emit('vote-band', {'id': band.id}),
       ),
     );
   }
@@ -88,13 +126,13 @@ class _HomepageState extends State<Homepage> {
         context: context,
         builder: (context) {
           return AlertDialog(
-            title: Text('New band name:'),
+            title: const Text('New band name:'),
             content: TextField(
               controller: textController,
             ),
             actions: <Widget>[
               MaterialButton(
-                  child: Text('Add'),
+                  child: const Text('Add'),
                   elevation: 5,
                   textColor: Colors.blue,
                   onPressed: () => addBandToList(textController.text, context))
@@ -132,16 +170,69 @@ class _HomepageState extends State<Homepage> {
   }
 
   addBandToList(String name, context) {
-    print(name);
-
     if (name.length > 1) {
-      // Podemos agregar a list band - no es vacio
-      bands.add(Band(id: DateTime.now().toString(), name: name, votes: 0));
-      // ver cambios _ como estamos en statefulwidget ... rederiza los cambios : redibujar
-      setState(() {});
+      final socketService = Provider.of<SocketService>(context, listen: false);
+      socketService.emit('add-band', {'name': name});
     }
 
     // cerrar ese dialogo
     Navigator.pop(context);
+  }
+
+  Widget _showGraph() {
+    Map<String, double> dataMap = {};
+    // dataMap.putIfAbsent('Flutter', () => 5);
+    for (var band in bands) {
+      dataMap.putIfAbsent(band.name, () => band.votes.toDouble());
+    }
+
+    final List<Color> colorList = [
+      Colors.blue[50]!,
+      Colors.blue[200]!,
+      Colors.pink[50]!,
+      Colors.pink[200]!,
+      Colors.yellow[50]!,
+      Colors.yellow[200]!,
+    ];
+
+    if (dataMap.isNotEmpty) {
+      return Container(
+          padding: const EdgeInsets.only(top: 10),
+          width: double.infinity,
+          height: 200,
+          child: PieChart(
+            dataMap: dataMap,
+            animationDuration: const Duration(milliseconds: 800),
+            chartLegendSpacing: 32,
+            chartRadius: MediaQuery.of(context).size.width / 3.2,
+            colorList: colorList,
+            initialAngleInDegree: 0,
+            chartType: ChartType.ring,
+            ringStrokeWidth: 32,
+            centerText: "HYBRID",
+            legendOptions: const LegendOptions(
+              showLegendsInRow: false,
+              legendPosition: LegendPosition.right,
+              showLegends: true,
+              // legendShape: _BoxShape.circle,
+              legendTextStyle: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            chartValuesOptions: const ChartValuesOptions(
+              showChartValueBackground: true,
+              showChartValues: true,
+              showChartValuesInPercentage: false,
+              showChartValuesOutside: false,
+              decimalPlaces: 1,
+            ),
+            // gradientList: ---To add gradient colors---
+            // emptyColorGradient: ---Empty Color gradient---
+          ));
+    }
+
+    return Container(
+      child: const Text('waiting...'),
+    );
   }
 }
