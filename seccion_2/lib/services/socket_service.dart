@@ -28,7 +28,8 @@ class SocketService with ChangeNotifier {
   // metodo privada - no refresa nada
   void _initConfig() {
     // Dart client --- Connection ----
-    _socket = IO.io('http://192.168.1.58:3009', {
+    _socket = IO.io('https://dswddwq.herokuapp.com/', {
+      //  http://192.168.1.58:3009
       //: 3004
       'transports': ['websocket'],
       'autoConnect':
