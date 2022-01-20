@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 //pull_to_refresh: ^2.0.0
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 
 // Models
 import 'package:seccion_6/models/usuario.dart';
+
+// Provider
+import 'package:seccion_6/services/auth_service.dart';
 
 class UsuariosPage extends StatefulWidget {
   @override
@@ -26,16 +30,22 @@ class _UsuariosPageState extends State<UsuariosPage> {
 
   @override
   Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context);
+    final usuario = authService.usuario;
+
     return Scaffold(
         appBar: AppBar(
-          title:
-              const Text('Mi Nombre', style: TextStyle(color: Colors.black87)),
+          title: Text(usuario?.nombre ?? 'Sin Nombre',
+              style: const TextStyle(color: Colors.black87)),
           elevation: 1,
           backgroundColor: Colors.white,
           leading: IconButton(
             icon: const Icon(Icons.exit_to_app, color: Colors.black87),
             onPressed: () {
-              print('pres');
+              // TODO: Desconectar el socket server
+              Navigator.pushReplacementNamed(context, 'login');
+              // no instance  provider , i m using stattic
+              AuthService.deleteToken();
             },
           ),
           actions: <Widget>[
