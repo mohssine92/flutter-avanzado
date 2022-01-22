@@ -6,11 +6,6 @@ import 'dart:convert';
 
 import 'package:seccion_6/models/usuario.dart';
 
-LoginResponse loginResponseFromJson(String str) =>
-    LoginResponse.fromJson(json.decode(str));
-
-String loginResponseToJson(LoginResponse data) => json.encode(data.toJson());
-
 class LoginResponse {
   LoginResponse({
     required this.ok,
@@ -22,15 +17,12 @@ class LoginResponse {
   Usuario usuario;
   String token;
 
-  factory LoginResponse.fromJson(Map<String, dynamic> json) => LoginResponse(
-        ok: json["ok"],
-        usuario: Usuario.fromJson(json["usuario"]),
-        token: json["token"],
-      );
+  factory LoginResponse.fromJson(String str) =>
+      LoginResponse.fromMap(json.decode(str));
 
-  Map<String, dynamic> toJson() => {
-        "ok": ok,
-        "usuario": usuario.toJson(),
-        "token": token,
-      };
+  factory LoginResponse.fromMap(Map<String, dynamic> json) => LoginResponse(
+        ok: json["ok"] ?? '',
+        usuario: Usuario.fromMap(json["usuario"]),
+        token: json["token"] ?? '',
+      );
 }

@@ -7,6 +7,8 @@ import 'package:seccion_6/routes/routes.dart';
 
 // Services
 import 'package:seccion_6/services/auth_service.dart';
+import 'package:seccion_6/services/chat_service.dart';
+import 'package:seccion_6/services/socket_service.dart';
 
 void main() => runApp(MyApp());
 
@@ -20,6 +22,8 @@ class MyApp extends StatelessWidget {
         // coleccion de classes de tipo provider
         // Ventaja Provider : AuthService() : crear instancia global , es un singlton - TAmbien va notificale a los widgets necesarios cuado quiero redibujarlos
         ChangeNotifierProvider(create: (_) => AuthService()),
+        ChangeNotifierProvider(create: (_) => SocketService()),
+        ChangeNotifierProvider(create: (_) => ChatService()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -30,3 +34,7 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+
+
+// --no-sound-null-safety arg run app 

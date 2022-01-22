@@ -9,6 +9,9 @@ import 'package:seccion_6/models/usuario.dart';
 
 // Provider
 import 'package:seccion_6/services/auth_service.dart';
+import 'package:seccion_6/services/chat_service.dart';
+import 'package:seccion_6/services/socket_service.dart';
+import 'package:seccion_6/services/usuarios_service.dart';
 
 class UsuariosPage extends StatefulWidget {
   @override
@@ -20,18 +23,24 @@ class _UsuariosPageState extends State<UsuariosPage> {
   final RefreshController _refreshController =
       RefreshController(initialRefresh: false);
 
-  final usuarios = [
-    Usuario(uid: '1', nombre: 'María', email: 'test1@test.com', online: true),
-    Usuario(
-        uid: '2', nombre: 'Melissa', email: 'test2@test.com', online: false),
-    Usuario(
-        uid: '3', nombre: 'Fernando', email: 'test3@test.com', online: true),
-  ];
+  // Es classe no implementada provider ni changenotifier - no injectada en la  - solo tiene funcion async a disparara
+  final usuarioService = UsuariosService();
+
+  // la rellanamos atraves peticion http
+  List<Usuario> usuarios = [];
+
+  @override
+  void initState() {
+    // Traer lista de usuarios
+    _cargarUsuarios();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
     final usuario = authService.usuario;
+    final socketService = Provider.of<SocketService>(context);
 
     return Scaffold(
         appBar: AppBar(
@@ -42,7 +51,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
           leading: IconButton(
             icon: const Icon(Icons.exit_to_app, color: Colors.black87),
             onPressed: () {
-              // TODO: Desconectar el socket server
+              socketService.disconnect();
               Navigator.pushReplacementNamed(context, 'login');
               // no instance  provider , i m using stattic
               AuthService.deleteToken();
@@ -51,8 +60,11 @@ class _UsuariosPageState extends State<UsuariosPage> {
           actions: <Widget>[
             Container(
               margin: const EdgeInsets.only(right: 10),
-              child: Icon(Icons.check_circle, color: Colors.blue[400]),
-              // child: Icon( Icons.offline_bolt, color: Colors.red ),
+              // notar dif - si se cae el servidor - puede implemenar otros casos : ternario relacionar solo a conexion socker - es decir seguir loguedo pero
+              // disconnectado del chat igual como have facebook
+              child: (socketService.serverStatus == ServerStatus.Online)
+                  ? Icon(Icons.check_circle, color: Colors.blue[400])
+                  : const Icon(Icons.offline_bolt, color: Colors.red),
             )
           ],
         ),
@@ -82,26 +94,35 @@ class _UsuariosPageState extends State<UsuariosPage> {
   // Metodo extraida :  privada returna el tipo ListTile
   ListTile _usuarioListTile(Usuario usuario) {
     return ListTile(
-      title: Text(usuario.nombre),
-      subtitle: Text(usuario.email),
-      leading: CircleAvatar(
-        child: Text(usuario.nombre.substring(0, 2)),
-        backgroundColor: Colors.blue[100],
-      ),
-      trailing: Container(
-        width: 10,
-        height: 10,
-        decoration: BoxDecoration(
-            color: usuario.online ? Colors.green[300] : Colors.red,
-            borderRadius: BorderRadius.circular(100)),
-      ),
-    );
+        title: Text(usuario.nombre),
+        subtitle: Text(usuario.email),
+        leading: CircleAvatar(
+          child: Text(usuario.nombre.substring(0, 2)),
+          backgroundColor: Colors.blue[100],
+        ),
+        trailing: Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+              color: usuario.online ? Colors.green[300] : Colors.red,
+              borderRadius: BorderRadius.circular(100)),
+        ),
+        onTap: () {
+          final chatService = Provider.of<ChatService>(context, listen: false);
+          chatService.usuarioPara = usuario;
+          // permite rederigir y  regresar a pantalla
+          Navigator.pushNamed(context, 'chat');
+        });
   }
 
   // metodo privado - vatraer algo de algun end-point
   _cargarUsuarios() async {
     // lo que hace espera un segundo y luego llama a refresh completed - (fictisio) - asi  _refreshController.refreshCompleted() : cuando se dispara se cierra la animacion de espera de traer la data en vida real lo que tarda peticion asyn http en traer data
-    await Future.delayed(Duration(milliseconds: 1000));
+    // await Future.delayed(Duration(milliseconds: 1000));
+
+    usuarios = await usuarioService.getUsuarios();
+    setState(() {});
+
     _refreshController.refreshCompleted();
   }
 }

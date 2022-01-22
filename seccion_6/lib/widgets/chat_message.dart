@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:seccion_6/services/auth_service.dart';
 
 class ChatMessage extends StatelessWidget {
   final String texto;
@@ -15,6 +17,9 @@ class ChatMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // univca Instancia tipo singlton -
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final myUid = authService.usuario?.uid;
     // FadeTransition : Encargar de hacer animacion de cambio de hopasidad
     return FadeTransition(
       opacity: animationController,
@@ -23,7 +28,7 @@ class ChatMessage extends StatelessWidget {
             CurvedAnimation(parent: animationController, curve: Curves.easeOut),
         child: Container(
           // sirver a mi para mostra un wodget o otro : esta es la idea
-          child: uid == '123' ? _myMessage() : _notMyMessage(),
+          child: uid == myUid ? _myMessage() : _notMyMessage(),
         ),
       ),
     );

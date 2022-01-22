@@ -31,11 +31,11 @@ class AuthService with ChangeNotifier {
     notifyListeners();
   }
 
-  // Getters del token de forma estática - uso: aveces quiero acceder al token si instanciar provider ..
+  // get del token de forma estática - uso: aveces quiero acceder al token si instanciar provider ..
   // uso de static no me permite acceso a las props de la clase - por eso nueva instancia const _storage = FlutterSecureStorage();
-  static Future<String?> getToken() async {
+  static Future<String> getToken() async {
     const _storage = FlutterSecureStorage();
-    final token = await _storage.read(key: 'token');
+    final token = await _storage.read(key: 'token') ?? '';
     return token;
   }
 
@@ -62,7 +62,7 @@ class AuthService with ChangeNotifier {
 
     if (resp.statusCode == 200) {
       // res.body  nos lo entrega como string paquete de http
-      final loginResponse = loginResponseFromJson(resp.body);
+      final loginResponse = LoginResponse.fromJson(resp.body);
       usuario = loginResponse.usuario;
 
       await _guardarToken(loginResponse.token);
@@ -86,7 +86,7 @@ class AuthService with ChangeNotifier {
     autenticando = false;
 
     if (resp.statusCode == 200) {
-      final loginResponse = loginResponseFromJson(resp.body);
+      final loginResponse = LoginResponse.fromJson(resp.body);
       usuario = loginResponse.usuario;
       await _guardarToken(loginResponse.token);
 
@@ -105,8 +105,9 @@ class AuthService with ChangeNotifier {
         headers: {'Content-Type': 'application/json', 'x-token': token});
 
     if (resp.statusCode == 200) {
-      final loginResponse = loginResponseFromJson(resp.body);
+      final loginResponse = LoginResponse.fromJson(resp.body);
       usuario = loginResponse.usuario;
+
       await _guardarToken(loginResponse.token);
       return true;
     } else {

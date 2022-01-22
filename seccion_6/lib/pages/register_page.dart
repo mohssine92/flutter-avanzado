@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:seccion_6/pages/helpers/mostrar_alerta.dart';
 
 // Helpers
-import 'package:seccion_6/helpers/mostrar_alerta.dart';
 
 // Provider
 import 'package:seccion_6/services/auth_service.dart';

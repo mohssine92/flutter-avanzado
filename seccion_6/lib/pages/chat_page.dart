@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
+import 'package:provider/provider.dart';
+
+// Models
+import 'package:seccion_6/models/mensajes_response.dart';
+
+// Services
+import 'package:seccion_6/services/chat_service.dart';
+import 'package:seccion_6/services/socket_service.dart';
+import 'package:seccion_6/services/auth_service.dart';
 
 // widget
 import 'package:seccion_6/widgets/chat_message.dart';
@@ -19,26 +28,85 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   final _focusNode = FocusNode();
   bool _estaEscribiendo = false;
 
-  // las intancias de widget responsable de mostracion de mensajes mios y de otra persina en chat
+  late ChatService chatService;
+  late SocketService socketService;
+  late AuthService authService;
+
+  // las intancias de widget responsable de mostracion de mensajes mios y de otra personas en chat
   List<ChatMessage> _messages = [];
 
   bool _messagesVacia = true;
 
+  // no se puede redibujat nada dentro del initstate - al menos que este dentro de un callback , por eso listen: false
+  @override
+  void initState() {
+    super.initState();
+
+    chatService = Provider.of<ChatService>(context, listen: false);
+    socketService = Provider.of<SocketService>(context, listen: false);
+    authService = Provider.of<AuthService>(context, listen: false);
+
+    // Inicializacion de Observable - Escuchar mensajes del servidor
+    socketService.socket.on('mensaje-personal', _escucharMensaje);
+
+    _cargarHistorial(chatService.usuarioPara.uid);
+  }
+
+  void _cargarHistorial(String usuarioID) async {
+    List<Mensaje> chat = await chatService.getChat(usuarioID);
+
+    final history = chat.map((m) => ChatMessage(
+          texto: m.mensaje,
+          uid: m.de, // la persona quien escribio el mensaje
+          animationController: AnimationController(
+              vsync: this, duration: const Duration(milliseconds: 0))
+            ..forward(), // empieza la animacion paraque se muestre
+        ));
+
+    setState(() {
+      // recuerda - refresh = cierra la app y reabrila la coleccion se vacia de memoria
+      // inserte all paraque se les inserta todo ala vez
+      _messages.insertAll(0, history);
+    });
+  }
+
+  void _escucharMensaje(dynamic payload) {
+    //print('--------------------------Tengo emnsaje : $payload');
+    ChatMessage message = ChatMessage(
+      texto: payload['mensaje'],
+      uid: payload['de'],
+      animationController: AnimationController(
+          vsync: this, duration: const Duration(milliseconds: 300)),
+    );
+
+    // Ya tenemos paylod - hacemos insersacion el la coleccion para poder ver en la pantalal
+
+    setState(() {
+      _messages.insert(0, message);
+    });
+
+    // para poder ver en pantalla hay que hechar nadar la animacion
+    message.animationController.forward();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final usuarioPara = chatService.usuarioPara;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
         title: Column(
           children: <Widget>[
             CircleAvatar(
-              child: const Text('Te', style: TextStyle(fontSize: 12)),
+              child: Text(usuarioPara.nombre.substring(0, 2),
+                  style: const TextStyle(fontSize: 12)),
               backgroundColor: Colors.blue[100],
               maxRadius: 14,
             ),
             const SizedBox(height: 3),
-            const Text('Melissa Flores',
-                style: TextStyle(color: Colors.black87, fontSize: 12))
+            Text(usuarioPara.nombre,
+                style: const TextStyle(color: Colors.black87, fontSize: 12))
           ],
         ),
         centerTitle: true,
@@ -90,7 +158,6 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
             onSubmitted: _handleSubmit,
             // onChanged - va emitiendo texto texto en tiempo de escritura
             onChanged: (texto) {
-              print(texto);
               // setState : lo que hace redibuja cuando se muta prop del widget - sabemos depende de una prop mutable de statefulwidget puede ser conficion de acto
               setState(() {
                 if (texto.trim().isNotEmpty) {
@@ -138,12 +205,8 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
 
   // private method - metodo de posteo
   _handleSubmit(String texto) {
-    //  print(texto.trim().length);
-
     // evitar mandar espaciadoras
     if (texto.trim().length == 0) return;
-
-    // print( texto );
 
     // se supene texto se envio - limpiamos input para escribir mas texto
     _textController.clear();
@@ -153,7 +216,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
 
     // TODO: resolver
     final newMessage = ChatMessage(
-      uid: '123',
+      uid: authService.usuario!.uid, // user actualmente connectado en la app
       texto: texto,
       animationController: AnimationController(
           vsync: this, duration: const Duration(milliseconds: 200)),
@@ -162,11 +225,17 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     _messagesVacia = false;
     newMessage.animationController.forward();
 
-    print(_messages);
-
     // para desagabilitar despues button despues de enviar mensaje  - logica inputa se ha vaciado
     setState(() {
       _estaEscribiendo = false;
+    });
+
+    socketService.emit('mensaje-personal', {
+      'de': authService
+          .usuario?.uid, // es demas porque lo tengo en toekn en server
+      'para': chatService.usuarioPara
+          .uid, // ventaja de usar service de alto nivel evitar mandar args - entre pantallas
+      'mensaje': texto
     });
   }
 
@@ -179,6 +248,9 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
       // Limpieza porque puede que estas instancias  de animacion que estamos haciendo por cada renderizo del widget message nos consuma la memoria .
       message.animationController.dispose();
     }
+
+    // Unsubscribir del Obsevable
+    socketService.socket.off('mensaje-personal');
 
     super.dispose();
   }
