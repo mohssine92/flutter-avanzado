@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:seccion_6/utils/my_colors.dart';
 
 class CustomInput extends StatelessWidget {
   // Definir los args que necesitamos para usar este widget
@@ -39,7 +40,10 @@ class CustomInput extends StatelessWidget {
         keyboardType: keyboardType,
         obscureText: isPassword,
         decoration: InputDecoration(
-            prefixIcon: Icon(icon),
+            prefixIcon: Icon(
+              icon,
+              color: MyColors.primaryButton,
+            ),
             focusedBorder: InputBorder.none,
             border: InputBorder.none,
             hintText: placeholder),

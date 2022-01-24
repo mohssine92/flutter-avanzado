@@ -10,6 +10,9 @@ import 'package:seccion_6/services/auth_service.dart';
 import 'package:seccion_6/services/chat_service.dart';
 import 'package:seccion_6/services/socket_service.dart';
 
+// Utils
+import 'package:seccion_6/utils/my_colors.dart';
+
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
@@ -27,14 +30,19 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'Chat App',
+        title: 'Delivery App',
         initialRoute: 'loading',
         routes: appRoutes,
+        // Rstablecer  Color global primario en la app
+        theme: ThemeData(
+          primaryColor: MyColors.primaryColor,
+          // fontFamily: 'NimbusSans'
+        ),
       ),
     );
   }
 }
 
-
-
-// --no-sound-null-safety arg run app 
+// --no-sound-null-safety arg run app
+// https://lottiefiles.com/search?q=delivery&category=animations : page of animation 
+// https://www.1001freefonts.com/

@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:seccion_6/pages/helpers/mostrar_alerta.dart';
+import 'package:seccion_6/helpers/mostrar_alerta.dart';
 
 // Helpers
 
 // Provider
 import 'package:seccion_6/services/auth_service.dart';
+import 'package:seccion_6/utils/my_colors.dart';
 
 // Widgets
 import 'package:seccion_6/widgets/boton_azul.dart';
+import 'package:seccion_6/widgets/circl_login.dart';
 import 'package:seccion_6/widgets/custom_input.dart';
 import 'package:seccion_6/widgets/labels.dart';
 import 'package:seccion_6/widgets/logo.dart';
@@ -21,13 +23,19 @@ class RegisterPage extends StatelessWidget {
         body: SafeArea(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
+            // Stack ubicar sigiente elemente enciama del anterior
             child: Container(
               height: MediaQuery.of(context).size.height * 0.9,
+              // column nos va permitir ubicar elementos uno bajo del otro - elementos ubicados de manera vertical
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
-                  Logo(titulo: 'Registro'),
+                  Logo(
+                      top: 80,
+                      titulo: 'Delivery Maroc',
+                      path: 'assets/img/delivery.png'),
                   _Form(),
+                  // const SizedBox(height: 10),
                   const Labels(
                     ruta: 'login',
                     titulo: '¿Ya tienes una cuenta?',
@@ -36,7 +44,7 @@ class RegisterPage extends StatelessWidget {
                   const Text(
                     'Términos y condiciones de uso',
                     style: TextStyle(fontWeight: FontWeight.w200),
-                  )
+                  ),
                 ],
               ),
             ),

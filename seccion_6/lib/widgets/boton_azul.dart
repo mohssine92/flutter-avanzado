@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:seccion_6/utils/my_colors.dart';
 
 class BotonAzul extends StatelessWidget {
   final String text;
@@ -15,7 +16,7 @@ class BotonAzul extends StatelessWidget {
     return RaisedButton(
       elevation: 2,
       highlightElevation: 5,
-      color: Colors.blue,
+      color: MyColors.primaryButton,
       shape: StadiumBorder(),
       onPressed: onPressed,
       child: Container(
